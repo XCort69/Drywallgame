@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>404: Лист не найден</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{width:100%;height:100%;background:#fff;overflow:hidden;touch-action:none;
+  -webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;
+  -webkit-touch-callout:none;}
+#wrap{
+  position:fixed;top:0;left:0;
+  width:100%;height:100%;
+  display:flex;align-items:center;justify-content:center;
+  background:#fff;
+}
+canvas{
+  display:block;
+  image-rendering:pixelated;
+  image-rendering:-moz-crisp-edges;
+  image-rendering:crisp-edges;
+  touch-action:none;
+  cursor:none;
+  -webkit-user-select:none;user-select:none;
+  -webkit-touch-callout:none;
+}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="gc"></canvas></div>
+<script>
+// ═══════════════════════════════════════
+//  404: ЛИСТ НЕ НАЙДЕН — v8.0
+//  Fixes v8: portrait canvas 400×600 (mobile scale×2), tap-on-hole insert,
+//            overtorque bug fix, looseSpd cap
+// ═══════════════════════════════════════
+const canvas=document.getElementById('gc');
+const ctx=canvas.getContext('2d');
+ctx.imageSmoothingEnabled=false;
+
+// ── Блокировка выделения и контекстного меню на мобиле ──
+document.addEventListener('selectstart',e=>e.preventDefault());
+document.addEventListener('contextmenu',e=>e.preventDefault());
+// touch preventDefault только на canvas — хедер Tilda остаётся кликабельным на мобилке
+canvas.addEventListener('touchstart',e=>e.preventDefault(),{passive:false});
+canvas.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+canvas.addEventListener('touchend',e=>e.preventDefault(),{passive:false});
+
+// ── Виртуальное поле (портретное 400×600) ──
+// embed-версия: внутри iframe хедера Tilda нет
+const VW=400,VH=600;
+const HEADER_H=0;
+let SC=1,OX=0,OY=0;
+function resize(){
+  const W=window.innerWidth,H=window.innerHeight;
+  SC=Math.min(W/VW,H/VH);
+  OX=(W-VW*SC)/2; OY=(H-VH*SC)/2;
+  canvas.width=W; canvas.height=H;
+  ctx.imageSmoothingEnabled=false;
+}
+window.addEventListener('resize',resize); resize();
+function rv(rx,ry){return{x:(rx-OX)/SC,y:(ry-OY)/SC};}
+
+// ── 100 фраз ───────────────────────────
+const PHRASES=[
+  "ПРОРАБ НЕ НАЙДЕН","ВИНОВНЫЙ НЕ НАЙДЕН","ПОДРЯДЧИК НЕ НАЙДЕН",
+  "СМЕТА НЕ НАЙДЕНА","ШУРУПОВЁРТ НЕ НАЙДЕН","РАБОЧИЙ ПОНЕДЕЛЬНИК НЕ НАЙДЕН",
+  "ПРЯМЫЕ УГЛЫ НЕ НАЙДЕНЫ","УРОВЕНЬ НЕ НАЙДЕН","РАБОЧАЯ БРИГАДА НЕ НАЙДЕНА",
+  "ТЕХНИКА БЕЗОПАСНОСТИ НЕ НАЙДЕНА","КАСКА НЕ НАЙДЕНА","ГОРИЗОНТАЛЬ НЕ НАЙДЕНА",
+  "СОГЛАСОВАННЫЙ ПРОЕКТ НЕ НАЙДЕН","СТРОИТЕЛЬНЫЙ БЮДЖЕТ НЕ НАЙДЕН",
+  "ЗАВЕРШЁННЫЙ РЕМОНТ НЕ НАЙДЕН","ТРУДОВОЙ ДОГОВОР НЕ НАЙДЕН",
+  "ЧИСТОВАЯ ОТДЕЛКА НЕ НАЙДЕНА","ДОКУМЕНТАЦИЯ НЕ НАЙДЕНА",
+  "ОТВЕТСТВЕННЫЙ НЕ НАЙДЕН","СРОКИ НЕ НАЙДЕНЫ","ГАРАНТИЯ НЕ НАЙДЕНА",
+  "ЗАКАЗЧИК НЕ НАЙДЕН","АВАНСОВЫЙ ПЛАТЁЖ НЕ НАЙДЕН",
+  "ПЛОСКАЯ СТЕНА НЕ НАЙДЕНА","РАБОЧИЙ ЧЕРТЁЖ НЕ НАЙДЕН",
+  "ДЮБЕЛЬ НЕ НАЙДЕН","МОНТАЖНАЯ ПЕНА НЕ НАЙДЕНА",
+  "РОВНАЯ ПОВЕРХНОСТЬ НЕ НАЙДЕНА","ДОП.САМОРЕЗ НЕ НАЙДЕН",
+  "СТРОИТЕЛЬНЫЙ СКОТЧ НЕ НАЙДЕН","ЗАМЕРЩИК НЕ НАЙДЕН",
+  "ПРЯМАЯ ЛИНИЯ НЕ НАЙДЕНА","МАЛЯР НЕ НАЙДЕН",
+  "ОБЕЩАННЫЙ ДЕДЛАЙН НЕ НАЙДЕН","УКЛАДЧИК НЕ НАЙДЕН",
+  "ПОТОЛОК НЕ НАЙДЕН","ЭЛЕКТРИК НЕ НАЙДЕН","САНТЕХНИК НЕ НАЙДЕН",
+  "ПОСТАВЩИК НЕ НАЙДЕН","ДОГОВОР НЕ НАЙДЕН",
+  "ПРИЧИНА ЗАДЕРЖКИ НЕ НАЙДЕНА","МЕТАЛЛИЧЕСКИЙ ПРОФИЛЬ НЕ НАЙДЕН",
+  "МОНТАЖНИК НЕ НАЙДЕН","СПИСОК МАТЕРИАЛОВ НЕ НАЙДЕН",
+  "СТРОИТЕЛЬНАЯ ЛИЦЕНЗИЯ НЕ НАЙДЕНА","ЗАКРЫТЫЙ АКТ НЕ НАЙДЕН",
+  "ПЛИТОЧНИК НЕ НАЙДЕН","ПАРКЕТЧИК НЕ НАЙДЕН",
+  "МАСТЕР НА ВСЕ РУКИ НЕ НАЙДЕН","РУЛЕТКА НЕ НАЙДЕНА",
+  "ПЕРФОРАТОР НЕ НАЙДЕН","ХОЗЯИН ОБЪЕКТА НЕ НАЙДЕН",
+  "СМЕТА ПО СМЕТЕ НЕ НАЙДЕНА","РОВНЫЙ ПОЛ НЕ НАЙДЕН",
+  "ШПАКЛЁВЩИК НЕ НАЙДЕН","КАБЕЛЬ-КАНАЛ НЕ НАЙДЕН",
+  "РАЗМЕТКА НЕ НАЙДЕНА","ПЫЛЕСОС НА ОБЪЕКТЕ НЕ НАЙДЕН",
+  "ТЕРПЕНИЕ ЗАКАЗЧИКА НЕ НАЙДЕНО","ЗАВЕРШЁННАЯ СДАЧА НЕ НАЙДЕНА",
+  "ДОБРОСОВЕСТНЫЙ ПОДРЯДЧИК НЕ НАЙДЕН","ПЛАН РАБОТ НЕ НАЙДЕН",
+  "АКТ ПРИЁМКИ НЕ НАЙДЕН","ЗАЗЕМЛЕНИЕ НЕ НАЙДЕНО","ПРОЕКТ НЕ НАЙДЕН",
+  "МОНТАЖНЫЙ КЛЕЙ НЕ НАЙДЕН","ДОРОЖНАЯ КАРТА РЕМОНТА НЕ НАЙДЕНА",
+  "ЗАПАСНОЙ ПЛАН НЕ НАЙДЕН","ТРЕЗВЫЙ РАБОЧИЙ НЕ НАЙДЕН",
+  "ОПЫТНЫЙ МАСТЕР НЕ НАЙДЕН","ПРИЁМКА РАБОТ НЕ НАЙДЕНА",
+  "ОТДЕЛКА В СРОК НЕ НАЙДЕНА","ЧЕСТНАЯ СМЕТА НЕ НАЙДЕНА",
+  "РАБОЧИЙ В КАСКЕ НЕ НАЙДЕН","ПОНЯТНЫЙ ЧЕРТЁЖ НЕ НАЙДЕН",
+  "СОГЛАСОВАНИЕ НЕ НАЙДЕНО","МАСТЕР ГКЛ НЕ НАЙДЕН",
+  "НОРМАЛЬНАЯ ДОКУМЕНТАЦИЯ НЕ НАЙДЕНА","РАБОЧИЙ С ОПЫТОМ НЕ НАЙДЕН",
+  "ПРОРАБ ПРИШЕДШИЙ ВОВРЕМЯ НЕ НАЙДЕН","ЧИСТЫЙ ОБЪЕКТ НЕ НАЙДЕН",
+  "ГРАМОТНЫЙ ЗАМЕР НЕ НАЙДЕН","ЗАПОЛНЕННЫЙ ДОГОВОР НЕ НАЙДЕН",
+  "ВЕРТИКАЛЬНАЯ СТЕНА НЕ НАЙДЕНА","АККУРАТНЫЙ МОНТАЖ НЕ НАЙДЕН",
+  "РАБОЧАЯ РОЗЕТКА НЕ НАЙДЕНА","РОВНЫЙ ПОТОЛОК НЕ НАЙДЕН",
+  "НОРМАЛЬНАЯ СТЯЖКА НЕ НАЙДЕНА","ЧИСТОВОЙ ГКЛ НЕ НАЙДЕН",
+  "СТРОИТЕЛЬНЫЙ УРОВЕНЬ НЕ НАЙДЕН","ОТВЕТСТВЕННЫЙ ИСПОЛНИТЕЛЬ НЕ НАЙДЕН",
+  "НУЛЕВОЙ УРОВЕНЬ НЕ НАЙДЕН","ПРАВИЛО НЕ НАЙДЕНО",
+  "ЛИНЕЙКА НЕ НАЙДЕНА","МАРКЕР НЕ НАЙДЕН",
+  "ЗАЩИТНЫЕ ОЧКИ НЕ НАЙДЕНЫ","ПЫЛЬ УБРАНА — НЕТ, НЕ НАЙДЕНА",
+  "ПРЯМОЙ УГОЛ НЕ НАЙДЕН","САМОРЕЗ В НУЖНОМ МЕСТЕ НЕ НАЙДЕН"
+];
+function rp(){return PHRASES[Math.floor(Math.random()*PHRASES.length)];}
+
+// ── Состояние ──────────────────────────
+let state='start';
+let score=0,hi=parseInt(localStorage.getItem('gkl6')||'0');
+let lvl=1,screwStock=1,lastBonus=0;
+let bonusAnim=null;
+let curPhrase=rp();
+// FIX: флаг для предотвращения мгновенной победы
+let hasPlayerAction=false;
+
+// ── Комбо-множитель ───────────────────
+let comboCount=0;        // сколько подряд закрученных без потери
+let comboTimer=0;        // таймер ×1.5 бонуса (сек)
+const COMBO_THRESHOLD=3; // нужно закрутить 3 подряд
+const COMBO_DURATION=2;  // длительность ×1.5 в секундах
+let comboAnim=null;      // анимация текста "COMBO ×1.5!"
+
+// ── Золотой саморез ───────────────────
+let goldenActive=false;     // сейчас в запасе есть золотой
+let goldenFreezeTimer=0;    // таймер заморозки (сек)
+let goldenFreezeActive=false; // эффект заморозки активен (пока не потерян золотой саморез)
+let goldenIconAnim=0;       // анимация иконки (0..1 пульсация)
+
+// ── Паника-режим ──────────────────────
+// Паника включается когда закручено 8 из 10 саморезов
+let panicMode=false;
+
+// ── Тайминг ───────────────────────────
+let lastT=0,pixT=0,lastPixT=0;
+let scoreT=0,lvlT=0,lvlUpT=0;
+
+// ── Поинтеры ──────────────────────────
+const ptrs={};
+let pDown=false,pX=VW/2,pY=VH/2;
+const isMob=()=>window.matchMedia('(pointer:coarse)').matches;
+
+canvas.style.touchAction='none';
+canvas.addEventListener('pointerdown',e=>{
+  e.preventDefault();
+  canvas.setPointerCapture(e.pointerId);
+  const v=rv(e.clientX,e.clientY);
+  ptrs[e.pointerId]={x:v.x,y:v.y};
+  pDown=true; pX=v.x; pY=v.y;
+  if(state==='start'){startGame();}
+  else if(state==='win'||state==='gameover'){
+    checkHomeLink(v.x,v.y);
+  } else if(state==='playing'){
+    // МГНОВЕННОЕ нажатие на дырку — вкрутить саморез (любая кнопка/палец)
+    placeScrew(v.x,v.y);
+    // Тут pDown=true — тут же начнётся закручивание нового самореза
+  }
+},{passive:false});
+canvas.addEventListener('pointermove',e=>{
+  e.preventDefault();
+  const v=rv(e.clientX,e.clientY);
+  ptrs[e.pointerId]={x:v.x,y:v.y};
+  if(e.isPrimary||Object.keys(ptrs).length===1){pX=v.x;pY=v.y;}
+},{passive:false});
+canvas.addEventListener('pointerup',e=>{
+  e.preventDefault();
+  delete ptrs[e.pointerId];
+  pDown=Object.keys(ptrs).length>0;
+  if(!pDown){pX=-999;pY=-999;}
+},{passive:false});
+canvas.addEventListener('pointercancel',e=>{
+  delete ptrs[e.pointerId];
+  pDown=Object.keys(ptrs).length>0;
+},{passive:false});
+// ПКМ — вкрутить саморез (десктоп)
+canvas.addEventListener('contextmenu',e=>{
+  e.preventDefault();
+  if(state!=='playing') return;
+  const v=rv(e.clientX,e.clientY);
+  placeScrew(v.x,v.y);
+});
+
+// ── Геометрия листа (центр 400×600 canvas) ──
+// Лист 260×390 под HUD (68px) + 8px отступ
+// SY+SH=76+390=466; ниже группа подсказки/бонусов
+const SX=70,SY=76,SW=260,SH=390;
+
+// ── САМОРЕЗЫ: расположение по схеме ─────
+// 10 шт: 4 угла + 1 центр сверху + 1 центр снизу + 2 слева + 2 справа
+const ALL_SLOTS=(()=>{
+  let id=0; const s=[];
+  const cx=SX+SW/2;
+  const cy_top=SY, cy_bot=SY+SH;
+  const lx=SX, rx=SX+SW;
+  const y1=SY+Math.round(SH*0.30); // ~30% сверху
+  const y2=SY+Math.round(SH*0.67); // ~67% сверху
+  // Верхний ряд: левый угол, центр, правый угол
+  s.push({id:id++,x:lx,  y:cy_top}); // top-left
+  s.push({id:id++,x:cx,  y:cy_top}); // top-center
+  s.push({id:id++,x:rx,  y:cy_top}); // top-right
+  // Левая сторона: верх, низ
+  s.push({id:id++,x:lx,  y:y1});     // left-upper
+  s.push({id:id++,x:lx,  y:y2});     // left-lower
+  // Правая сторона: верх, низ
+  s.push({id:id++,x:rx,  y:y1});     // right-upper
+  s.push({id:id++,x:rx,  y:y2});     // right-lower
+  // Нижний ряд: левый угол, центр, правый угол
+  s.push({id:id++,x:lx,  y:cy_bot}); // bot-left
+  s.push({id:id++,x:cx,  y:cy_bot}); // bot-center
+  s.push({id:id++,x:rx,  y:cy_bot}); // bot-right
+  return s; // ровно 10
+})();
+
+// ── Физика листа ────────────────────────
+let sh={x:SX,y:SY,w:SW,h:SH,alpha:1,
+  falling:false,fallPhase:'',
+  pivX:0,pivY:0,pivAngle:0,pivAV:0,pivT:0,
+  fy:SY,fvy:0,fAngle:0,fAV:0};
+
+// ── Саморезы ───────────────────────────
+let screws=[],holes=[];
+
+function looseSpd(l){return Math.min(18, 11 + (l-1) * (7/12));} // рост 11→18 за 12 уровней
+function maxLoose(l){return Math.min(4, 2 + Math.floor((l-1) * (2/12)));} // рост 2→4 за 12 уровней
+// Всегда 6 саморезов на листе, расположение рандомное
+const SHEET_SCREWS = 4;
+function startCount(l){ return SHEET_SCREWS; }
+
+function initScrews(l){
+  screws=[];holes=[];
+  const shuffled=[...ALL_SLOTS].sort(()=>Math.random()-0.5);
+  shuffled.slice(0,startCount(l)).forEach(sl=>screws.push(mkScrew(sl,true)));
+  shuffled.slice(startCount(l)).forEach(sl=>holes.push({...sl}));
+}
+function mkScrew(sl,tight,golden){
+  return{id:sl.id,x:sl.x,y:sl.y,
+    tight:tight?100:0,loosening:false,looseSpd:0,
+    rot:Math.random()*Math.PI*2,active:true,_rew:tight,
+    _init:!!tight,
+    _cooldown:0,
+    golden:!!golden,
+    overT:0,stripped:false,stripAnim:0,wobble:0};
+}
+
+// ── Частицы ────────────────────────────
+let parts=[];
+function sparks(x,y,col){
+  for(let i=0;i<6;i++){
+    const a=Math.random()*Math.PI*2,sp=1+Math.random()*2.5;
+    parts.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-1.5,life:1,sz:2+Math.random()*2,col:col||'#444'});
+  }
+}
+
+// ══════════════════════════════════════
+// СПРАЙТЫ РАБОЧЕГО (из v2 — эталонные)
+// Цвета: 0=прозрачный,1=кожа,2=каска(жёлт),3=костюм(тёмн),4=шуруп(серый),5=жилет(оранж),6=чёрный
+// ══════════════════════════════════════
+const WC=['','#f5c5a3','#f0c030','#444444','#999999','#e05010','#111111'];
+const W_STAND=[
+  [0,0,0,0,0,2,2,2,2,2,0,0,0,0,0,0],
+  [0,0,0,0,2,2,2,2,2,2,2,0,0,0,0,0],
+  [0,0,0,0,2,2,2,2,2,2,2,0,0,0,0,0],
+  [0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0],
+  [0,0,0,0,0,1,6,1,1,1,0,4,4,4,4,0],
+  [0,0,0,0,0,1,1,1,1,1,0,4,0,0,4,0],
+  [0,0,0,5,5,3,3,3,3,3,3,4,0,0,4,0],
+  [0,0,0,5,5,3,3,3,3,3,3,4,4,4,4,0],
+  [0,0,0,5,5,3,3,3,3,3,3,0,0,0,0,0],
+  [0,0,0,0,5,5,3,3,3,3,0,0,0,0,0,0],
+  [0,0,0,0,3,3,0,0,3,3,0,0,0,0,0,0],
+  [0,0,0,0,3,3,0,0,3,3,0,0,0,0,0,0],
+  [0,0,0,0,3,3,0,0,3,3,0,0,0,0,0,0],
+  [0,0,0,3,3,3,0,0,3,3,3,0,0,0,0,0],
+  [0,0,0,3,3,0,0,0,0,3,3,0,0,0,0,0],
+  [0,0,3,3,3,0,0,0,0,3,3,3,0,0,0,0],
+];
+const W_JUMP=[
+  [0,0,0,0,0,2,2,2,2,2,0,0,0,0,0,0],
+  [0,0,0,0,2,2,2,2,2,2,2,0,0,0,0,0],
+  [0,0,0,0,2,2,2,2,2,2,2,0,0,0,0,0],
+  [0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0],
+  [0,4,4,4,4,1,6,1,1,1,0,0,0,0,0,0],
+  [0,4,0,0,4,1,1,1,1,1,0,0,0,0,0,0],
+  [0,4,0,0,4,3,3,3,3,3,3,5,5,0,0,0],
+  [0,4,4,4,4,3,3,3,3,3,3,5,5,0,0,0],
+  [0,0,0,0,0,3,3,3,3,3,3,5,5,0,0,0],
+  [0,0,0,0,0,3,3,3,3,5,5,0,0,0,0,0],
+  [0,0,0,0,3,3,0,0,3,3,0,0,0,0,0,0],
+  [0,0,0,3,3,0,0,0,0,3,3,0,0,0,0,0],
+  [0,0,3,3,0,0,0,0,0,0,3,3,0,0,0,0],
+  [0,3,3,0,0,0,0,0,0,0,0,3,3,0,0,0],
+  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+];
+const W_DEAD=[
+  [0,0,0,0,0,2,2,2,2,2,0,0,0,0,0,0],
+  [0,0,0,0,2,2,2,2,2,2,2,0,0,0,0,0],
+  [0,0,0,0,2,2,2,2,2,2,2,0,0,0,0,0],
+  [0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0],
+  [0,0,0,0,0,1,6,1,6,1,0,0,0,0,0,0],
+  [0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0],
+  [0,0,0,5,5,3,3,3,3,3,3,0,0,0,0,0],
+  [0,3,3,5,5,3,3,3,3,3,3,3,3,0,0,0],
+  [0,0,3,5,5,3,3,3,3,3,3,3,0,0,0,0],
+  [0,0,0,0,5,5,3,3,3,3,0,0,0,0,0,0],
+  [0,0,0,0,3,3,3,3,3,3,0,0,0,0,0,0],
+  [0,0,0,3,3,3,0,0,3,3,3,0,0,0,0,0],
+  [0,0,3,3,0,0,0,0,0,0,3,3,0,0,0,0],
+  [0,3,3,0,0,0,0,0,0,0,0,3,3,0,0,0],
+  [3,3,0,0,0,0,0,0,0,0,0,0,3,3,0,0],
+  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+];
+const W_WIN=[
+  [0,0,0,0,0,2,2,2,2,2,0,0,0,0,0,0],
+  [0,0,0,0,2,2,2,2,2,2,2,0,0,0,0,0],
+  [0,0,0,0,2,2,2,2,2,2,2,0,0,0,0,0],
+  [0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0],
+  [0,4,4,4,4,1,6,1,1,1,0,0,0,0,0,0],
+  [0,4,0,0,4,1,1,1,1,1,0,0,0,0,0,0],
+  [0,4,0,0,4,3,3,3,3,3,3,5,5,0,0,0],
+  [0,4,4,4,4,3,3,3,3,3,3,5,5,0,0,0],
+  [0,0,0,0,0,3,3,3,3,3,3,5,5,0,0,0],
+  [0,0,0,0,0,3,3,3,3,5,5,0,0,0,0,0],
+  [0,0,0,0,3,3,0,0,3,3,0,0,0,0,0,0],
+  [0,0,0,3,3,0,0,0,0,3,3,0,0,0,0,0],
+  [0,0,3,3,0,0,0,0,0,0,3,3,0,0,0,0],
+  [0,3,3,0,0,0,0,0,0,0,0,3,3,0,0,0],
+  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+];
+function spr(grid,dx,dy,px){
+  grid.forEach((row,ri)=>row.forEach((c,ci)=>{
+    if(!c) return;
+    ctx.fillStyle=WC[c];
+    ctx.fillRect(Math.round(dx+ci*px),Math.round(dy+ri*px),px,px);
+  }));
+}
+
+// ── Пиксельный значок самореза ─────────
+const SCREW_ICON=[
+  [0,1,1,1,1,1,0,0],
+  [1,1,1,1,1,1,1,0],
+  [1,1,1,1,1,1,1,0],
+  [0,1,1,1,1,1,0,0],
+  [0,0,1,2,1,0,0,0],
+  [0,0,1,2,1,0,0,0],
+  [0,0,1,2,1,0,0,0],
+  [0,0,0,2,0,0,0,0],
+];
+const SIC=['','#555','#111'];
+const SIC_GOLD=['','#d4a017','#7a5c00'];
+function screwPix(dx,dy,px,golden){
+  const cols = golden ? SIC_GOLD : SIC;
+  SCREW_ICON.forEach((row,ri)=>row.forEach((c,ci)=>{
+    if(!c) return;
+    ctx.fillStyle=cols[c];
+    ctx.fillRect(Math.round(dx+ci*px),Math.round(dy+ri*px),px,px);
+  }));
+}
+
+// Попытка заспавнить золотой саморез — вызывается при выдаче самореза после lvl>=10
+function trySpawnGolden(){
+  if(lvl<10) return;
+  if(goldenActive) return;
+  if(Math.random()<0.35){
+    goldenActive=true;
+    goldenIconAnim=0;
+  }
+}
+
+// Отдельная проверка по порогу очков
+let lastGoldenScore=0;
+function checkGoldenByScore(){
+  const threshold=5250;
+  const goldenMil=Math.floor(score/threshold);
+  if(goldenMil>Math.floor(lastGoldenScore/threshold) && !goldenActive){
+    goldenActive=true; goldenIconAnim=0;
+    lastGoldenScore=score;
+  }
+}
+
+// ══════════════════════════════════════
+// АНИМАЦИЯ МАСТЕРА — v2 физика
+// Прыгает внутри нуля в "404".
+// Физика строго 12fps (gated by doPixTick).
+// groundY = zeroR * 0.55 (нижняя часть нуля)
+// wPx=2 → wH=32px, отлично вписывается в радиус ~30px
+// ══════════════════════════════════════
+const W_PX=2;          // размер пикселя мастера
+const W_H=16*W_PX;     // 32px — высота спрайта
+const W_GRAV=1.1;      // гравитация — быстрый снэппи прыжок (12fps)
+// wY — смещение вверх от точки земли (0 = земля, <0 = в воздухе)
+let wY=0;             // 0 = на земле, отрицательное = выше
+let wV=0;             // текущая вертикальная скорость
+let wJump=false;
+let wAngle=0;         // угол вращения при прыжке
+let wGroundBaseY=0;   // абсолютная Y земли мастера (вычисляется в drawStart)
+
+function wResetAnim(){
+  wY=0; wV=-(7+Math.random()*2); wJump=false; wAngle=0;
+}
+
+function wTick(doPixTick){
+  if(!doPixTick) return;
+  wY+=wV;
+  wV+=W_GRAV;
+  if(wY>=0){
+    wY=0;
+    wV=-(7+Math.random()*2); // новый прыжок сразу
+    wJump=false;
+    wAngle=0; // сброс вращения при приземлении
+  } else {
+    wJump=true;
+    // вращение в прыжке
+    wAngle+=0.45;
+    if(wAngle>Math.PI*2) wAngle-=Math.PI*2;
+  }
+}
+
+// ── Старт ──────────────────────────────
+function placeScrew(vx,vy){
+  if(screwStock<=0 && !goldenActive) return;
+  let best=null,bd=38;
+  holes.forEach(h=>{const d=Math.hypot(vx-h.x,vy-h.y);if(d<bd){best=h;bd=d;}});
+  if(best){
+    const useGolden = goldenActive; // золотой авто-выбирается первым
+    if(useGolden){
+      goldenActive=false;
+      screws.push(mkScrew(best,false,true));
+    } else {
+      if(screwStock<=0) return;
+      screws.push(mkScrew(best,false,false));
+      screwStock=Math.max(0,screwStock-1);
+    }
+    holes=holes.filter(h=>h!==best);
+    sparks(best.x,best.y, useGolden ? '#d4a017' : '#888');
+  }
+}
+
+function startGame(){
+  score=0;lvl=1;screwStock=1;lastBonus=0;
+  bonusAnim=null;parts=[];
+  scoreT=0;lvlT=0;lvlUpT=0;
+  hasPlayerAction=false;
+  comboCount=0; comboTimer=0; comboAnim=null;
+  goldenActive=false; goldenFreezeTimer=0; goldenFreezeActive=false; goldenIconAnim=0; lastGoldenScore=0;
+  panicMode=false;
+  _winInitDone=false; winScreenshotDone=false;
+  wY=0; wV=-(7+Math.random()*2); wJump=false; wAngle=0;
+  Object.assign(sh,{x:SX,y:SY,w:SW,h:SH,alpha:1,falling:false,fallPhase:'',
+    pivX:0,pivY:0,pivAngle:0,pivAV:0,pivT:0,
+    fy:SY,fvy:0,fAngle:0,fAV:0});
+  initScrews(lvl);
+  state='playing';
+}
+
+// ── Главный цикл ───────────────────────
+requestAnimationFrame(function loop(ts){
+  requestAnimationFrame(loop);
+  const dt=Math.min((ts-lastT)/1000,0.07);
+  lastT=ts;
+  const doPixTick=(ts-lastPixT>=1000/12);
+  if(doPixTick){pixT++;lastPixT=ts;}
+  if(state==='playing') update(dt);
+  wTick(doPixTick);  // всегда обновляем мастера (и в меню, и в игре)
+  draw(ts);
+});
+
+// ── UPDATE ─────────────────────────────
+function update(dt){
+  if(sh.falling){updateFall(dt);updateParts(dt);return;}
+
+  // Паника-режим
+  // Паника — когда закручено 8+ из 10 слотов
+  const tightCount = screws.filter(s=>s.active&&!s.stripped&&s.tight>=100).length;
+  panicMode = (tightCount >= 8);
+
+  // Таймеры
+  if(comboTimer>0) comboTimer-=dt;
+  else if(comboTimer<0) comboTimer=0;
+
+  if(goldenFreezeTimer>0) goldenFreezeTimer=Math.max(0,goldenFreezeTimer-dt);
+  goldenIconAnim=(goldenIconAnim+dt*3)%(Math.PI*2);
+
+  // Счёт
+  scoreT+=dt;
+  if(scoreT>=0.15){
+    const mult = (comboTimer>0) ? 1.5 : 1.0;
+    score+=lvl*0.9*mult; scoreT=0;
+    if(score>hi){hi=Math.floor(score);localStorage.setItem('gkl6',hi);}
+    checkGoldenByScore();
+    const mil=Math.floor(score/750);
+    if(mil>lastBonus){
+      lastBonus=mil; screwStock=Math.min(3,screwStock+1);
+      trySpawnGolden();
+      bonusAnim={y:VH/2-30,vy:-80,timer:2.5};
+    }
+  }
+
+  // Уровень
+  lvlT+=dt;
+  // Экспоненциальное ускорение: уровень 1=20с, уровень 8=6с, далее не быстрее
+  const lvlInt=Math.max(8, Math.round(22 * Math.pow(0.74, lvl-1)));
+  if(lvlT>=lvlInt){lvlT=0;lvl++;lvlUpT=2;}
+  if(lvlUpT>0) lvlUpT-=dt;
+
+  // Бонус анимация
+  if(bonusAnim){
+    bonusAnim.y+=bonusAnim.vy*dt;
+    bonusAnim.vy+=200*dt;
+    bonusAnim.timer-=dt;
+    if(bonusAnim.timer<=0) bonusAnim=null;
+  }
+  if(comboAnim){
+    comboAnim.y+=comboAnim.vy*dt;
+    comboAnim.vy+=150*dt;
+    comboAnim.timer-=dt;
+    if(comboAnim.timer<=0) comboAnim=null;
+  }
+
+  const active=screws.filter(s=>s.active&&!s.stripped);
+
+  // ПАНИКА: все саморезы выкручиваются одновременно
+  if(panicMode){
+    active.forEach(s=>{
+      if(!s.loosening && s.tight>5 && (s._cooldown||0)<=0){
+        s.loosening=true;
+        s.looseSpd=looseSpd(lvl)+Math.random()*4;
+      }
+    });
+  } else {
+    // Обычное выкручивание
+    const loosening=active.filter(s=>s.loosening).length;
+    if(loosening<maxLoose(lvl)){
+      const cands=active.filter(s=>!s.loosening&&s.tight>5&&(s._cooldown||0)<=0);
+      if(cands.length&&Math.random()<0.018*(1+lvl*0.08)){
+        const t=cands[Math.floor(Math.random()*cands.length)];
+        t.loosening=true; t.looseSpd=looseSpd(lvl)+Math.random()*3;
+      }
+    }
+  }
+
+  const plist=Object.values(ptrs);
+  const hitR=isMob()?36:22;
+
+  active.forEach(s=>{
+    let pressing=false;
+    for(const p of plist){
+      if(Math.hypot(p.x-s.x,p.y-s.y)<hitR){pressing=true;break;}
+    }
+
+    if(pressing&&pDown){
+      if(s.tight<100){
+        s.tight=Math.min(100,s.tight+(50+lvl*2)*dt);
+        s.rot-=0.25;
+        s.loosening=false;
+        s._init=false;
+        if(Math.random()<0.25) sparks(s.x,s.y, s.golden?'#d4a017':'#444');
+        if(s.tight>=100&&!s._rew){
+          s._rew=true;
+          const mult=(comboTimer>0)?1.5:1.0;
+          score+=80*mult;
+          hasPlayerAction=true;
+          s._cooldown=4.0;
+
+          // Золотой саморез — активируем заморозку
+          if(s.golden){
+            goldenFreezeActive=true;
+            goldenFreezeTimer=3.0;
+            screws.filter(sc=>sc.active&&sc!==s).forEach(sc=>{sc.loosening=false;});
+            sparks(s.x,s.y,'#d4a017');sparks(s.x,s.y,'#fff8a0');
+          }
+          // Любой саморез пока эффект активен — продлеваем таймер
+          else if(goldenFreezeActive){
+            goldenFreezeTimer=3.0;
+            screws.filter(sc=>sc.active&&sc!==s).forEach(sc=>{sc.loosening=false;});
+            sparks(s.x,s.y,'#d4a017');
+          }
+
+          // Комбо
+          comboCount++;
+          if(comboCount>=COMBO_THRESHOLD){
+            comboTimer=COMBO_DURATION;
+            comboAnim={y:VH/2-60,vy:-90,timer:1.8,text:'КОМБО ×1.5!'};
+          }
+        }
+      } else if(!s._init){
+        // Срыв резьбы — БЫСТРОЕ заполнение датчика, срыв сразу
+        s.overT+=dt*3; // в 3× быстрее
+        s.wobble=(Math.random()-0.5)*3;
+        s.rot+=0.06;
+        if(s.overT>=1.0){ // порог 1.0 (было 3.5)
+          // Мгновенный срыв без анимации
+          s.active=false; s.stripped=false; s.stripAnim=0;
+          holes.push({...ALL_SLOTS.find(sl=>sl.id===s.id)||{id:s.id,x:s.x,y:s.y}});
+          sparks(s.x,s.y,'#cc4400'); sparks(s.x,s.y,'#888');
+          screws=screws.filter(sc=>sc!==s);
+          // Срыв — сброс комбо
+          comboCount=0; comboTimer=0;
+        }
+      }
+    } else {
+      s.overT=Math.max(0,s.overT-dt*2);
+      s.wobble=0;
+      if(s.tight<99) s._rew=false;
+    }
+
+    // Выкручивание (заморожено при goldenFreezeTimer>0)
+    if(s.loosening&&!pressing&&goldenFreezeTimer<=0){
+      s.tight-=s.looseSpd*dt;
+      s.rot+=0.07+(1-s.tight/100)*0.2;
+      if(s.tight<=0){
+        s.tight=0; s.active=false; s.loosening=false;
+        holes.push({...ALL_SLOTS.find(sl=>sl.id===s.id)||{id:s.id,x:s.x,y:s.y}});
+        sparks(s.x,s.y,'#666');
+        // Если потеряли золотой — отключаем эффект заморозки
+        if(s.golden){ goldenFreezeActive=false; goldenFreezeTimer=0; }
+        screws=screws.filter(sc=>sc!==s);
+        // Потеря самореза — сброс комбо
+        comboCount=0; comboTimer=0;
+      }
+    }
+    if(!pressing) s._cooldown=Math.max(0,s._cooldown-dt);
+  });
+
+  // Сорванные (stripped уже не используем для мгновенного срыва, но оставим для совместимости)
+  screws.filter(s=>s.stripped).forEach(s=>{
+    s.stripAnim-=dt; s.rot+=0.15;
+    if(s.stripAnim<=0){
+      s.active=false; s.stripped=false;
+      holes.push({...ALL_SLOTS.find(sl=>sl.id===s.id)||{id:s.id,x:s.x,y:s.y}});
+      sparks(s.x,s.y,'#cc4400');
+      screws=screws.filter(sc=>sc!==s);
+    }
+  });
+
+  // Победа — нет пустых отверстий
+  if(hasPlayerAction && holes.length===0){state='win';}
+
+  // Падение
+  const rem=screws.filter(s=>s.active);
+  if(rem.length===1&&!sh.falling){
+    sh.falling=true; sh.fallPhase='pivot'; sh.pivT=0;
+    sh.pivX=rem[0].x; sh.pivY=rem[0].y;
+    sh.pivAngle=0; sh.pivAV=(Math.random()>0.5?1:-1)*0.5;
+  }
+  if(rem.length===0&&!sh.falling){
+    sh.falling=true; sh.fallPhase='free';
+    sh.fy=sh.y; sh.fvy=3; sh.fAngle=0; sh.fAV=(Math.random()-0.5)*0.06;
+  }
+
+  updateParts(dt);
+}
+
+function updateFall(dt){
+  if(sh.fallPhase==='pivot'){
+    sh.pivT+=dt; sh.pivAV+=2*dt; sh.pivAngle+=sh.pivAV*dt*60*0.016;
+    if(sh.pivT>0.9){
+      sh.fallPhase='free';
+      sh.fy=sh.y; sh.fvy=4+Math.abs(sh.pivAV);
+      sh.fAngle=sh.pivAngle*Math.PI/180; sh.fAV=(Math.random()-0.5)*0.06;
+      screws=[];holes=[];
+    }
+  } else {
+    sh.fvy+=32*dt; sh.fy+=sh.fvy*dt*15;
+    sh.fAngle+=sh.fAV;
+    sh.alpha=Math.max(0,sh.alpha-dt*0.9);
+    if(sh.fy>VH+300||sh.alpha<=0) state='gameover';
+  }
+}
+function updateParts(dt){
+  parts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=0.12;p.life-=0.04;});
+  parts=parts.filter(p=>p.life>0);
+}
+
+// ══════════════════════════════════════
+// ОТРИСОВКА
+// ══════════════════════════════════════
+function draw(ts){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.save();
+  ctx.translate(OX,OY); ctx.scale(SC,SC);
+
+  drawGrid();
+  if(state==='start')        drawStart(ts);
+  else if(state==='playing') drawGame(ts);
+  else if(state==='win')     drawWin(ts);
+  else if(state==='gameover') drawGO(ts);
+
+  ctx.restore();
+  cursor(pX*SC+OX,pY*SC+OY);
+}
+
+function drawGrid(){
+  ctx.strokeStyle='#eee';ctx.lineWidth=1;
+  for(let x=0;x<=VW;x+=20){
+    ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,VH);ctx.stroke();
+  }
+  for(let y=0;y<=VH;y+=20){
+    ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(VW,y);ctx.stroke();
+  }
+}
+
+// ── СТАРТ ЭКРАН ────────────────────────
+function drawStart(ts){
+  const cx=VW/2;
+
+  // ── Мастер прыгает вверху по центру ──
+  const masterGroundY = 148;
+  wGroundBaseY = masterGroundY;
+  const wW = 16*W_PX;
+  const wx  = cx - wW/2;
+  const wy  = masterGroundY + wY - W_H;
+
+  if(wJump){
+    ctx.save();
+    ctx.translate(Math.round(wx+wW/2), Math.round(wy+W_H/2));
+    ctx.rotate(wAngle);
+    spr(W_JUMP,-wW/2,-W_H/2,W_PX);
+    ctx.restore();
+  } else {
+    spr(W_STAND, Math.round(wx), Math.round(wy), W_PX);
+  }
+
+  // ── Плашка скидки вверху ──
+  const tagW=190, tagH=24, tagX=cx-tagW/2, tagY=160;
+  ctx.fillStyle='#e05010';
+  ctx.fillRect(tagX, tagY, tagW, tagH);
+  ctx.fillStyle='#fff';
+  ctx.font='bold 11px "Courier New",monospace';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('ДАЁМ СКИДКУ 5% ЗА ПОБЕДУ!', cx, tagY+12);
+
+  // ── Заголовок ──
+  ctx.fillStyle='#1a1a1a';
+  ctx.font='bold 20px "Courier New",monospace';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('Закрутите все саморезы', cx, tagY+46);
+  ctx.fillText('в нашей мини-игре!', cx, tagY+70);
+
+  // ── Описание (3 строки) ──
+  ctx.fillStyle='#555';
+  ctx.font='11px "Courier New",monospace';
+  ctx.fillText('Покажите скриншот победы —', cx, tagY+100);
+  ctx.fillText('мы уменьшим стоимость текущего', cx, tagY+116);
+  ctx.fillText('или будущего контракта на 5%.', cx, tagY+132);
+
+  // ── Разделитель ──
+  ctx.fillStyle='#ddd';
+  ctx.fillRect(cx-80, tagY+150, 160, 1);
+
+  // ── Мета-строка (иконки) ──
+  ctx.fillStyle='#999';
+  ctx.font='10px "Courier New",monospace';
+  ctx.fillText('⏱ ~2 мин  ·  🆓 бесплатно  ·  📱 на телефоне', cx, tagY+165);
+
+  // ── Кнопка [ НАЖМИ ] мигающая ──
+  const btnY = tagY + 205;
+  const bl = Math.floor(ts/600)%2===0;
+  const btnW=130, btnH=30;
+  if(bl){
+    ctx.strokeStyle='#e05010'; ctx.lineWidth=2;
+    ctx.strokeRect(cx-btnW/2, btnY-btnH/2, btnW, btnH);
+    ctx.fillStyle='rgba(224,80,16,0.08)';
+    ctx.fillRect(cx-btnW/2, btnY-btnH/2, btnW, btnH);
+  }
+  ctx.fillStyle=bl?'#e05010':'#ccc';
+  ctx.font=`bold 14px "Courier New",monospace`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('[ НАЖМИ ]', cx, btnY);
+
+  // ── HI рекорд ──
+  ctx.fillStyle='#bbb'; ctx.textAlign='right';
+  ctx.font='11px "Courier New",monospace';
+  ctx.fillText('HI '+String(hi).padStart(5,'0'), VW-16, 24);
+}
+
+// ── ИГРА ───────────────────────────────
+function drawGame(ts){
+  hud();
+  drawWallBg();
+
+  ctx.save(); ctx.globalAlpha=sh.alpha;
+  if(sh.falling&&sh.fallPhase==='pivot'){
+    ctx.translate(sh.pivX,sh.pivY);
+    ctx.rotate(sh.pivAngle*Math.PI/180);
+    ctx.translate(-sh.pivX,-sh.pivY);
+    drawSheet(); drawHoles(); drawAllScrews(ts);
+  } else if(sh.falling&&sh.fallPhase==='free'){
+    const cx2=sh.x+sh.w/2, cy2=sh.fy+sh.h/2;
+    ctx.translate(cx2,cy2); ctx.rotate(sh.fAngle); ctx.translate(-cx2,-cy2);
+    ctx.translate(0,sh.fy-sh.y);
+    drawSheet();
+  } else {
+    drawSheet(); drawHoles(); drawAllScrews(ts);
+  }
+  ctx.restore();
+
+  // Частицы
+  parts.forEach(p=>{
+    ctx.save(); ctx.globalAlpha=p.life;
+    ctx.fillStyle=p.col;
+    ctx.fillRect(Math.round(p.x),Math.round(p.y),Math.ceil(p.sz),Math.ceil(p.sz));
+    ctx.restore();
+  });
+
+  // Уровень
+  if(lvlUpT>0){
+    ctx.save(); ctx.globalAlpha=Math.min(1,lvlUpT);
+    ctx.fillStyle='#222'; ctx.font='bold 22px "Courier New",monospace';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('УРОВЕНЬ '+lvl,VW/2,VH/2-12);
+    ctx.fillStyle='#666'; ctx.font='11px "Courier New",monospace';
+    ctx.fillText('САМОРЕЗЫ КРУТЯТСЯ БЫСТРЕЕ!',VW/2,VH/2+10);
+    ctx.restore();
+  }
+
+  // Бонусная анимация: +1 саморез летит вверх как монетка
+  if(bonusAnim){
+    const alpha=Math.min(1,bonusAnim.timer);
+    ctx.save(); ctx.globalAlpha=alpha;
+    const bp=4;
+    screwPix(VW/2-4*bp-20,bonusAnim.y-4*bp,bp,false);
+    ctx.fillStyle='#e05010'; ctx.font='bold 15px "Courier New",monospace';
+    ctx.textAlign='left'; ctx.textBaseline='middle';
+    ctx.fillText('+1 САМОРЕЗ',VW/2+14,bonusAnim.y);
+    ctx.restore();
+  }
+
+  // Комбо анимация
+  if(comboAnim){
+    const alpha=Math.min(1,comboAnim.timer);
+    ctx.save(); ctx.globalAlpha=alpha;
+    ctx.fillStyle='#e05010';
+    ctx.font='bold 20px "Courier New",monospace';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    // Лёгкое мерцание
+    ctx.fillText(comboAnim.text, VW/2, comboAnim.y);
+    ctx.restore();
+  }
+
+  // Паника — мигающие красные вспышки по краям
+  if(panicMode && !sh.falling){
+    const pfl=Math.sin(Date.now()*0.014)>0.3;
+    if(pfl){
+      ctx.save();ctx.strokeStyle='#cc0000';ctx.lineWidth=5;ctx.globalAlpha=0.45;
+      ctx.strokeRect(2,2,VW-4,VH-4);ctx.restore();
+    }
+  }
+
+  // Красная рамка при опасности (1 саморез остался)
+  const rem=screws.filter(s=>s.active);
+  if(rem.length<=1&&!sh.falling&&!panicMode){
+    if(Math.floor(ts/200)%2===0){
+      ctx.save(); ctx.strokeStyle='#cc0000'; ctx.lineWidth=4; ctx.globalAlpha=0.55;
+      ctx.strokeRect(2,2,VW-4,VH-4); ctx.restore();
+    }
+  }
+
+  // Подсказка
+  ctx.fillStyle='#aaa'; ctx.font='12px "Courier New",monospace';
+  ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+  const hint=isMob()?'Нажми на отверстие чтобы вкрутить саморез':'Нажми ЛКМ на отверстие чтобы вкрутить';
+  ctx.fillText(hint,VW/2,VH-8);
+}
+
+function hud(){
+  const T=10;
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,VW,58+T);
+  ctx.fillStyle='#333'; ctx.fillRect(0,56+T,VW,2);
+
+  // Счётчик саморезов слева — золотой если goldenActive
+  const px=4;
+  const isGold=goldenActive;
+  if(isGold){
+    // Пульсирующий золотой фон
+    const pulse=0.5+0.5*Math.sin(goldenIconAnim);
+    ctx.save();
+    ctx.globalAlpha=0.18+pulse*0.15;
+    ctx.fillStyle='#d4a017';
+    ctx.fillRect(8,T,8*px+30,36);
+    ctx.restore();
+    // Мерцающий контур
+    ctx.save();ctx.strokeStyle='#d4a017';ctx.lineWidth=1.5;
+    ctx.globalAlpha=0.5+pulse*0.5;
+    ctx.strokeRect(8,T,8*px+30,36);ctx.restore();
+  }
+  screwPix(12,T+6,px,isGold);
+  ctx.fillStyle=isGold?'#d4a017':'#222';
+  ctx.font=`bold 18px "Courier New",monospace`;
+  ctx.textAlign='left'; ctx.textBaseline='middle';
+  ctx.fillText('×'+(goldenActive?'★':screwStock),12+8*px+4,T+24);
+
+  // Заморозка — синяя полоска под иконкой
+  if(goldenFreezeTimer>0){
+    const prog=goldenFreezeTimer/3.0;
+    const barCol=goldenFreezeActive?'#50a0ff':'#aaa';
+    ctx.fillStyle='rgba(80,160,255,0.15)';ctx.fillRect(8,T+38,8*px+30,5);
+    ctx.fillStyle=barCol;ctx.fillRect(8,T+38,Math.round((8*px+30)*prog),5);
+    ctx.fillStyle=barCol;ctx.font='9px "Courier New",monospace';
+    ctx.textAlign='left';ctx.textBaseline='middle';
+    ctx.fillText(goldenFreezeActive?'❄ ЗАМОРОЗКА':'❄',12,T+50);
+  }
+
+  // Уровень по центру
+  ctx.textAlign='center';
+  const panicFlicker=panicMode&&Math.sin(Date.now()*0.012)>0;
+  ctx.fillStyle=panicFlicker?'#cc0000':'#aaa';
+  ctx.font='11px "Courier New",monospace';
+  ctx.fillText(panicMode?'⚠ ПАНИКА':'УР.',VW/2,T+13);
+  ctx.fillStyle=panicFlicker?'#ff2200':'#222';
+  ctx.font='bold 20px "Courier New",monospace';
+  ctx.fillText(lvl,VW/2,T+33);
+
+  // Очки справа
+  ctx.textAlign='right';
+  ctx.fillStyle='#aaa'; ctx.font='11px "Courier New",monospace';
+  ctx.fillText('HI '+String(hi).padStart(5,'0'),VW-12,T+13);
+  const scoreCol=comboTimer>0?'#e05010':'#222';
+  ctx.fillStyle=scoreCol; ctx.font='bold 20px "Courier New",monospace';
+  ctx.fillText(String(Math.floor(score)).padStart(5,'0'),VW-12,T+33);
+
+  // Комбо таймер — оранжевая полоска справа
+  if(comboTimer>0){
+    const prog=comboTimer/COMBO_DURATION;
+    ctx.fillStyle='rgba(224,80,16,0.18)';ctx.fillRect(VW-12-60,T+38,60,5);
+    ctx.fillStyle='#e05010';ctx.fillRect(VW-12-60,T+38,Math.round(60*prog),5);
+    ctx.fillStyle='#e05010';ctx.font='bold 9px "Courier New",monospace';
+    ctx.textAlign='right';ctx.textBaseline='middle';
+    ctx.fillText('×1.5',VW-12,T+50);
+  }
+
+  ctx.textBaseline='alphabetic';
+}
+
+function drawWallBg(){
+  // Фон стены
+  ctx.fillStyle='#e8e8e8';
+  ctx.fillRect(SX-14,SY-14,SW+28,SH+28);
+  // Горизонтальные UD-профили (верх, середина, низ)
+  const HPS=[SY,SY+SH/2,SY+SH];
+  HPS.forEach(hy=>hProf(SX-14,hy-5,SW+28,10));
+  // Вертикальные CD-стойки (лево, право)
+  const VPS=[SX,SX+SW];
+  VPS.forEach(vx=>vProf(vx-4,SY-14,8,SH+28));
+}
+function hProf(x,y,w,h){
+  ctx.fillStyle='#c0c0c0';ctx.fillRect(x,y,w,h);
+  ctx.fillStyle='#d8d8d8';ctx.fillRect(x,y,w,2);
+  ctx.fillStyle='#a0a0a0';ctx.fillRect(x,y+h-2,w,2);
+  ctx.fillStyle='#b8b8b8';
+  for(let rx=x;rx<x+w;rx+=16)ctx.fillRect(rx,y+2,1,h-4);
+}
+function vProf(x,y,w,h){
+  ctx.fillStyle='#c0c0c0';ctx.fillRect(x,y,w,h);
+  ctx.fillStyle='#d8d8d8';ctx.fillRect(x,y,2,h);
+  ctx.fillStyle='#a0a0a0';ctx.fillRect(x+w-2,y,2,h);
+  ctx.fillStyle='#b8b8b8';
+  for(let ry=y;ry<y+h;ry+=16)ctx.fillRect(x+2,ry,w-4,1);
+}
+function drawSheet(){
+  // ГКЛ лист
+  ctx.fillStyle='#f0ede0';ctx.fillRect(sh.x,sh.y,sh.w,sh.h);
+  ctx.fillStyle='#e8e5d8';
+  for(let ly=sh.y+14;ly<sh.y+sh.h;ly+=14)ctx.fillRect(sh.x,ly,sh.w,1);
+  ctx.fillStyle='#c8c5b5';
+  ctx.fillRect(sh.x,sh.y,sh.w,3); ctx.fillRect(sh.x,sh.y+sh.h-3,sh.w,3);
+  ctx.fillRect(sh.x,sh.y,3,sh.h); ctx.fillRect(sh.x+sh.w-3,sh.y,3,sh.h);
+}
+function drawHoles(){
+  holes.forEach(h=>{
+    // Дырка
+    ctx.fillStyle='#777';
+    ctx.beginPath();ctx.arc(h.x,h.y,5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#333';
+    ctx.beginPath();ctx.arc(h.x,h.y,2.5,0,Math.PI*2);ctx.fill();
+    // Пунктирный кружок если есть саморезы
+    if(screwStock>0){
+      const bl=Math.floor(Date.now()/500+h.x*0.1)%2===0;
+      if(bl){
+        ctx.save();ctx.strokeStyle='#e05010';ctx.lineWidth=1.5;
+        ctx.setLineDash([3,3]);
+        ctx.beginPath();ctx.arc(h.x,h.y,12,0,Math.PI*2);ctx.stroke();
+        ctx.setLineDash([]);ctx.restore();
+      }
+    }
+  });
+}
+function drawAllScrews(ts){
+  screws.forEach(s=>{
+    if(!s.active&&!s.stripped) return;
+    const wobX=s.wobble||0;
+    const wobY=0; // без прыжков при срыве — убрали анимацию
+    drawScrew(s.x+wobX,s.y+wobY,s.rot,s.tight,s.overT,s.golden,s.loosening,ts);
+  });
+}
+function drawScrew(x,y,angle,tight,overT,golden,loosening,ts){
+  const r=7;
+  const pullOut=(1-tight/100)*4;
+  ctx.save();
+  ctx.translate(Math.round(x),Math.round(y+pullOut));
+  ctx.rotate(angle);
+
+  // Тень
+  ctx.fillStyle='rgba(0,0,0,0.12)';
+  ctx.beginPath();ctx.arc(1,2,r,0,Math.PI*2);ctx.fill();
+
+  if(golden){
+    // Золотой саморез
+    const pulse=0.5+0.5*Math.sin(Date.now()*0.008);
+    ctx.fillStyle=`rgb(${Math.floor(200+pulse*55)},${Math.floor(160+pulse*40)},0)`;
+    ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#7a5c00';
+    ctx.fillRect(-Math.round(r*0.7),-Math.round(r*0.2),Math.round(r*1.4),Math.round(r*0.4));
+    ctx.fillRect(-Math.round(r*0.2),-Math.round(r*0.7),Math.round(r*0.4),Math.round(r*1.4));
+    // Блеск
+    ctx.fillStyle='rgba(255,255,200,0.5)';
+    ctx.fillRect(-3,-5,3,3);
+    // Контур мерцающий
+    ctx.strokeStyle=`rgba(255,230,50,${0.4+pulse*0.6})`;
+    ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.arc(0,0,r+2,0,Math.PI*2);ctx.stroke();
+  } else {
+    // Обычный саморез
+    const shade=Math.floor(55+(tight/100)*80);
+    ctx.fillStyle=`rgb(${shade},${shade},${shade})`;
+    ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#111';
+    ctx.fillRect(-Math.round(r*0.7),-Math.round(r*0.2),Math.round(r*1.4),Math.round(r*0.4));
+    ctx.fillRect(-Math.round(r*0.2),-Math.round(r*0.7),Math.round(r*0.4),Math.round(r*1.4));
+    ctx.fillStyle=`rgb(${shade+45},${shade+45},${shade+45})`;
+    ctx.fillRect(-3,-4,3,3);
+
+    // Индикатор пережима — красная дуга заполняется
+    if(overT>0){
+      const prog=Math.min(1, overT/1.0); // 0..1 за 1 секунду
+      ctx.strokeStyle=`rgba(220,30,0,${0.6+prog*0.4})`;
+      ctx.lineWidth=3;
+      ctx.beginPath();
+      ctx.arc(0,0,r+3,-Math.PI/2,-Math.PI/2+prog*Math.PI*2);
+      ctx.stroke();
+    }
+
+    // Паника: красное свечение для незакрученных
+    if(panicMode && loosening && tight<100){
+      const flicker=Math.sin(Date.now()*0.015)>0;
+      if(flicker){
+        ctx.strokeStyle='rgba(220,0,0,0.55)';
+        ctx.lineWidth=2.5;
+        ctx.beginPath();ctx.arc(0,0,r+5,0,Math.PI*2);ctx.stroke();
+      }
+    }
+  }
+  ctx.restore();
+}
+
+// ── ПОБЕДА ─────────────────────────────
+let winScreenshotDone = false;
+let winConfettiParts  = [];
+function initWinConfetti(){
+  winConfettiParts = [];
+  for(let i=0;i<38;i++){
+    const cols=['#e05010','#f0c030','#444','#c03e08','#888','#222'];
+    winConfettiParts.push({
+      x: Math.random()*VW, y: -10 - Math.random()*60,
+      vx:(Math.random()-0.5)*2.5, vy:1.2+Math.random()*2.2,
+      rot:Math.random()*Math.PI*2, rv:(Math.random()-0.5)*0.18,
+      w:4+Math.random()*6, h:3+Math.random()*3,
+      col:cols[Math.floor(Math.random()*cols.length)],
+      life:1
+    });
+  }
+}
+
+function updateWinConfetti(dt){
+  winConfettiParts.forEach(p=>{
+    p.x+=p.vx; p.y+=p.vy; p.rot+=p.rv;
+    if(p.y>VH+20) p.y=-10;
+  });
+}
+
+let _winInitDone = false;
+function drawWin(ts){
+  if(!_winInitDone){ initWinConfetti(); _winInitDone=true; }
+  updateWinConfetti(1/60);
+
+  drawGrid();
+  drawWallBg(); drawSheet(); drawAllScrews(ts);
+
+  // Полупрозрачная белая плашка
+  ctx.fillStyle='rgba(255,255,255,0.93)';
+  ctx.fillRect(0,0,VW,VH);
+
+  // Конфетти
+  winConfettiParts.forEach(p=>{
+    ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot);
+    ctx.fillStyle=p.col;
+    ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);
+    ctx.restore();
+  });
+
+  const cx=VW/2;
+  // Якорь контента — та же высота что и 404 на старт-экране
+  const topY = 120;
+
+  // Рабочий с победным жестом
+  const wp=5, wW=16*wp;
+  spr(W_WIN, cx-wW/2, topY - 80 + wY, wp);
+
+  // ── Заголовок ──
+  ctx.fillStyle='#222';
+  ctx.font='bold 22px "Courier New",monospace';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('ВСЕ САМОРЕЗЫ ЗАКРУЧЕНЫ!', cx, topY);
+
+  ctx.fillStyle='#e05010';
+  ctx.font='bold 14px "Courier New",monospace';
+  ctx.fillText('ОБЪЕКТ СДАН В СРОК  🏆', cx, topY+24);
+
+  ctx.fillStyle='#555';
+  ctx.font='11px "Courier New",monospace';
+  ctx.fillText('СЧЁТ: '+Math.floor(score), cx, topY+44);
+
+  // ── ПЛАШКА СКИДКИ ──
+  const boxX=28, boxY=topY+60, boxW=VW-56, boxH=88;
+  // фон
+  ctx.fillStyle='#fff8f5';
+  ctx.fillRect(boxX, boxY, boxW, boxH);
+  // оранжевая рамка
+  ctx.strokeStyle='#e05010'; ctx.lineWidth=2;
+  ctx.strokeRect(boxX, boxY, boxW, boxH);
+  // угловые акценты
+  const ac=8;
+  ctx.fillStyle='#e05010';
+  ctx.fillRect(boxX, boxY, ac, 2); ctx.fillRect(boxX, boxY, 2, ac);
+  ctx.fillRect(boxX+boxW-ac, boxY, ac, 2); ctx.fillRect(boxX+boxW-2, boxY, 2, ac);
+  ctx.fillRect(boxX, boxY+boxH-2, ac, 2); ctx.fillRect(boxX, boxY+boxH-ac, 2, ac);
+  ctx.fillRect(boxX+boxW-ac, boxY+boxH-2, ac, 2); ctx.fillRect(boxX+boxW-2, boxY+boxH-ac, 2, ac);
+
+  // Большая цифра скидки
+  ctx.fillStyle='#e05010';
+  ctx.font='bold 38px "Courier New",monospace';
+  ctx.textAlign='left';
+  ctx.fillText('−5%', boxX+12, boxY+50);
+
+  // Текст условия
+  ctx.fillStyle='#222';
+  ctx.font='bold 11px "Courier New",monospace';
+  ctx.textAlign='left';
+  ctx.fillText('СКИДКА НА СМЕТУ', boxX+90, boxY+22);
+  ctx.fillStyle='#555';
+  ctx.font='10px "Courier New",monospace';
+  ctx.fillText('за победу в игре', boxX+90, boxY+38);
+  ctx.fillStyle='#888';
+  ctx.font='9px "Courier New",monospace';
+  ctx.fillText('Сделайте скриншот этого экрана', boxX+90, boxY+54);
+  ctx.fillText('и пришлите нам при оформлении', boxX+90, boxY+66);
+  ctx.fillText('заявки — применим к смете.', boxX+90, boxY+78);
+
+  // ── КНОПКА «ПОЛУЧИТЬ СКИДКУ» ──
+  const btnY2 = boxY + boxH + 14;
+  const btnW2 = 220, btnH2 = 32;
+  const btnX2 = cx - btnW2/2;
+  const over = pX>=btnX2 && pX<=btnX2+btnW2 && pY>=btnY2 && pY<=btnY2+btnH2;
+  ctx.fillStyle = over ? '#c03e08' : '#e05010';
+  ctx.fillRect(btnX2, btnY2, btnW2, btnH2);
+  ctx.fillStyle='#fff';
+  ctx.font='bold 12px "Courier New",monospace';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('📸  СКРИНШОТ ПОБЕДЫ', cx, btnY2+16);
+
+  // ── Ссылка «← На главную» ──
+  homeLink(cx, btnY2 + btnH2 + 22);
+}
+
+// ── GAME OVER ──────────────────────────
+let gY=0, gV=-5;
+function drawGO(ts){
+  drawGrid();
+  ctx.fillStyle='rgba(255,255,255,0.92)';ctx.fillRect(0,0,VW,VH);
+  const cx=VW/2;
+  // Якорь — та же высота что и 404
+  const topY = 120;
+
+  // Мёртвый рабочий
+  gV+=W_GRAV*0.5; gY+=gV;
+  if(gY>=0){gY=0;gV=-(3+Math.random()*2);}
+  const wp=4, wW=16*wp;
+  spr(W_DEAD,cx-wW/2, topY-80+gY, wp);
+
+  ctx.fillStyle='#222'; ctx.font='bold 26px "Courier New",monospace';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('ИГРА ОКОНЧЕНА',cx, topY);
+  ctx.fillStyle='#555'; ctx.font='12px "Courier New",monospace';
+  ctx.fillText('404: '+curPhrase,cx, topY+30);
+  ctx.fillStyle='#222'; ctx.font='bold 16px "Courier New",monospace';
+  ctx.fillText('СЧЁТ: '+Math.floor(score),cx, topY+54);
+  ctx.fillStyle='#aaa'; ctx.font='11px "Courier New",monospace';
+  ctx.fillText('РЕКОРД: '+hi,cx, topY+74);
+
+  ctx.fillStyle='#555'; ctx.font='bold 13px "Courier New",monospace';
+  ctx.fillText('[ Сыграть снова ]',cx, topY+100);
+
+  homeLink(cx, topY+124);
+}
+
+// Рисуем ссылку "← На главную"
+function homeLink(cx,y){
+  const over=isOverHomeLink(cx,y);
+  ctx.fillStyle=over?'#e05010':'#888';
+  ctx.font=`${over?'bold ':''  }12px "Courier New",monospace`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('← На главную  infitout.ru',cx,y);
+  if(over){
+    // Подчёркивание
+    const w=ctx.measureText('← На главную  infitout.ru').width;
+    ctx.fillRect(cx-w/2,y+7,w,1);
+  }
+}
+function isOverHomeLink(cx,y){
+  const w=200, h=20;
+  return pX>=cx-w/2&&pX<=cx+w/2&&pY>=y-h/2&&pY<=y+h/2;
+}
+
+// Проверка клика по ссылке "На главную" и "Сыграть снова"
+function checkHomeLink(vx,vy){
+  const cx=VW/2;
+  if(state==='win'){
+    // Кнопка «СКРИНШОТ ПОБЕДЫ»
+    const topY=120;
+    const boxH=88, btnY2=topY+60+boxH+14, btnW2=220, btnH2=32, btnX2=cx-btnW2/2;
+    if(vx>=btnX2&&vx<=btnX2+btnW2&&vy>=btnY2&&vy<=btnY2+btnH2){
+      takeWinScreenshot(); return;
+    }
+    if(isOverHomeLink(cx, btnY2+btnH2+22)){
+      window.location.href='https://infitout.ru'; return;
+    }
+    _winInitDone=false; winScreenshotDone=false;
+    curPhrase=rp();gY=0;gV=-5;
+    wY=0;wV=-(7+Math.random()*2);wJump=false;wAngle=0;
+    state='start';
+  } else if(state==='gameover'){
+    const topY=120;
+    if(vx>=cx-90&&vx<=cx+90&&vy>=topY+88&&vy<=topY+112){
+      curPhrase=rp();gY=0;gV=-5;
+      wY=0;wV=-(7+Math.random()*2);wJump=false;wAngle=0;
+      state='start'; return;
+    }
+    if(isOverHomeLink(cx,topY+124)){
+      window.location.href='https://infitout.ru'; return;
+    }
+    curPhrase=rp();gY=0;gV=-5;
+    wY=0;wV=-(7+Math.random()*2);wJump=false;wAngle=0;
+    state='start';
+  }
+}
+
+// Скриншот экрана победы через canvas.toBlob → скачать
+function takeWinScreenshot(){
+  try{
+    // Рисуем один финальный кадр в отдельный offscreen-canvas
+    const oc=document.createElement('canvas');
+    oc.width=canvas.width; oc.height=canvas.height;
+    const octx=oc.getContext('2d');
+    octx.drawImage(canvas,0,0);
+    // Добавляем тонкую надпись «infitout.ru» снизу
+    octx.fillStyle='rgba(0,0,0,0.35)';
+    octx.fillRect(0,oc.height-22,oc.width,22);
+    octx.fillStyle='#fff';
+    octx.font='bold 11px "Courier New",monospace';
+    octx.textAlign='center'; octx.textBaseline='middle';
+    octx.fillText('infitout.ru  ·  скидка 5% на смету за победу в игре  ·  +7(495)180-43-65', oc.width/2, oc.height-11);
+    oc.toBlob(blob=>{
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url; a.download='infitout_404_victory.png';
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a);
+      setTimeout(()=>URL.revokeObjectURL(url),2000);
+    },'image/png');
+  } catch(e){
+    // Если CORS не позволяет — показываем инструкцию
+    alert('Сделайте скриншот экрана вручную (Print Screen / Cmd+Shift+4) и пришлите нам в Telegram или на почту!');
+  }
+}
+
+// ── КУРСОР — битка PH2 ──────────────────
+// Горячая точка = острие (вверх-влево, −45°)
+// Хвостовик уходит вниз-вправо. Отзеркалено. Острый наконечник.
+
+function cursor(rx, ry){
+  if(isMob()) return;
+
+  ctx.save();
+  ctx.translate(rx, ry);
+  // −45°: наконечник вверх-влево, хвостовик вниз-вправо (зеркало)
+  ctx.rotate(-Math.PI * 0.25);
+  // зеркалим по X
+  ctx.scale(-1, 1);
+
+  const s = Math.max(1, SC);
+
+  const bW    = 7  * s;
+  const tipL  = 10 * s;   // острый наконечник — длиннее
+  const muffL = 14 * s;
+  const bodyL = 10 * s;
+  const hexL  = 9  * s;
+
+  const y0 = 0;
+  const y1 = tipL;
+  const y2 = y1 + muffL;
+  const y3 = y2 + bodyL;
+  const y4 = y3 + hexL;
+
+  // ── ТЕНЬ ──
+  ctx.save();
+  ctx.translate(s, s);
+  ctx.fillStyle = 'rgba(0,0,0,0.20)';
+  ctx.beginPath();
+  ctx.moveTo(0, y0);
+  ctx.lineTo(-bW*0.5, y1); ctx.lineTo(bW*0.5, y1);
+  ctx.closePath(); ctx.fill();
+  ctx.fillRect(-bW*0.5, y1, bW, bodyL+muffL+hexL);
+  ctx.restore();
+
+  // ── НАКОНЕЧНИК — острый конус (без пятака) ──
+  // левая грань (светлее)
+  ctx.fillStyle = '#a0a0a0';
+  ctx.beginPath();
+  ctx.moveTo(0, y0);          // острие
+  ctx.lineTo(-bW*0.5, y1);
+  ctx.lineTo(-bW*0.08, y1);
+  ctx.closePath(); ctx.fill();
+  // правая грань (темнее)
+  ctx.fillStyle = '#4a4a4a';
+  ctx.beginPath();
+  ctx.moveTo(0, y0);
+  ctx.lineTo(bW*0.08, y1);
+  ctx.lineTo(bW*0.5, y1);
+  ctx.closePath(); ctx.fill();
+  // центр (яркий блик — ребро конуса)
+  ctx.fillStyle = '#d0d0d0';
+  ctx.beginPath();
+  ctx.moveTo(0, y0);
+  ctx.lineTo(-bW*0.08, y1);
+  ctx.lineTo(bW*0.08, y1);
+  ctx.closePath(); ctx.fill();
+  // острое ребро — тонкая линия
+  ctx.strokeStyle = '#ccc';
+  ctx.lineWidth = s * 0.5;
+  ctx.beginPath();
+  ctx.moveTo(0, y0);
+  ctx.lineTo(0, y1 * 0.7);
+  ctx.stroke();
+
+  // ── КРАСНАЯ МУФТА ──
+  ctx.fillStyle = '#cc2200';
+  ctx.fillRect(-bW*0.5, y1, bW*0.45, muffL);
+  ctx.fillStyle = '#8a1200';
+  ctx.fillRect(bW*0.05, y1, bW*0.45, muffL);
+  ctx.fillStyle = 'rgba(255,90,50,0.22)';
+  ctx.fillRect(-bW*0.5, y1, bW, muffL * 0.2);
+  ctx.fillStyle = '#600';
+  ctx.fillRect(-bW*0.5, y1, bW, s * 1.2);
+  ctx.fillStyle = '#600';
+  ctx.fillRect(-bW*0.5, y2 - s*1.2, bW, s * 1.2);
+
+  // ── СЕРЕБРИСТОЕ ТЕЛО ──
+  ctx.fillStyle = '#5a5a5a';
+  ctx.fillRect(-bW*0.5, y2, bW*0.45, bodyL);
+  ctx.fillStyle = '#888';
+  ctx.fillRect(bW*0.05, y2, bW*0.45, bodyL);
+  ctx.fillStyle = 'rgba(255,255,255,0.1)';
+  ctx.fillRect(-bW*0.5, y2, bW*0.18, bodyL);
+  ctx.fillStyle = '#2a2a2a';
+  ctx.fillRect(-bW*0.5, y3 - s, bW, s * 1.5);
+
+  // ── ШЕСТИГРАННЫЙ ХВОСТОВИК ──
+  const hW = bW * 0.75;
+  ctx.fillStyle = '#666';
+  ctx.beginPath();
+  ctx.moveTo(-bW*0.5, y3);
+  ctx.lineTo(-hW*0.5, y3 + hexL*0.18);
+  ctx.lineTo(-hW*0.5, y3);
+  ctx.closePath(); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(bW*0.5, y3);
+  ctx.lineTo(hW*0.5, y3 + hexL*0.18);
+  ctx.lineTo(hW*0.5, y3);
+  ctx.closePath(); ctx.fill();
+
+  const hY   = y3 + hexL * 0.18;
+  const hLen = hexL * 0.82;
+
+  ctx.fillStyle = '#4a4a4a';
+  ctx.fillRect(-hW*0.5, hY, hW*0.42, hLen);
+  ctx.fillStyle = '#787878';
+  ctx.fillRect(hW*0.08, hY, hW*0.42, hLen);
+  ctx.fillStyle = '#5e5e5e';
+  ctx.fillRect(-hW*0.08, hY, hW*0.16, hLen);
+  ctx.fillStyle = '#222';
+  ctx.fillRect(-hW*0.5, hY + hLen*0.3, hW, s * 1.5);
+  ctx.fillStyle = '#aaa';
+  ctx.fillRect(-hW*0.5, y4 - s*1.5, hW, s * 2);
+
+  ctx.restore();
+}
+</script>
+</body>
+</html>
